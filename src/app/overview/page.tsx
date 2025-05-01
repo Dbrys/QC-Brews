@@ -9,7 +9,7 @@ import {
   CalendarOutlined
 } from '@ant-design/icons';
 import { Button, Layout, Menu, theme } from 'antd';
-
+import Map from './map';
 const { Header, Sider, Content } = Layout;
 
 const Overview: React.FC = () => {
@@ -27,18 +27,7 @@ const Overview: React.FC = () => {
     switch (selectedKey) {
       case '1':
         return (
-          <div className="flex flex-col gap-4">
-            <div className="flex flex-row gap-4">
-              <div className="flex flex-col gap-2">
-                <h1 className="text-2xl font-bold">
-                  Breweries
-                </h1>
-                <p className="text-sm text-gray-500">
-                  Find quality craft beer in the QC area
-                </p>
-              </div>
-            </div>
-          </div>
+                <Map />
         );
       case '2':
         return (
