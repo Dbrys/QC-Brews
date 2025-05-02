@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import Image from 'next/image';
-import {
+import Icon, {
   MenuFoldOutlined,
   MenuUnfoldOutlined,
   HomeOutlined,
@@ -10,7 +10,9 @@ import {
 } from '@ant-design/icons';
 import { Button, Layout, Menu, theme } from 'antd';
 import Map from './map';
+import BeerIcon from '@/icons/BeerIcon';
 const { Header, Sider, Content } = Layout;
+
 
 const Overview: React.FC = () => {
   const [collapsed, setCollapsed] = useState(false);
@@ -23,6 +25,18 @@ const Overview: React.FC = () => {
     setSelectedKey(key);
   };
 
+  const renderHeader = () => {
+    switch (selectedKey) {
+      case '1':
+        return <div className="text-2xl font-bold">Breweries</div>;
+      case '2':
+        return <div className="text-2xl font-bold">Events</div>;
+      case '3':
+        return <div className="text-2xl font-bold">Beers</div>;
+      default:
+        return <div>Select a menu item</div>;
+    }
+  }
   const renderContent = () => {
     switch (selectedKey) {
       case '1':
@@ -87,14 +101,14 @@ const Overview: React.FC = () => {
             },
             {
               key: '3',
-              icon: <Image src="/beer.svg" alt="Beer" width={24} height={24} className="brightness-0 invert opacity-70 pr-2" />,
+              icon: <BeerIcon />,
               label: 'Beers',
             },
           ]}
         />
       </Sider>
       <Layout>
-        <Header style={{ padding: 0, background: colorBgContainer }}>
+        <Header style={{ padding: 0, background: colorBgContainer }} className="flex flex-row items-center">
           <Button
             type="text"
             icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
@@ -105,6 +119,7 @@ const Overview: React.FC = () => {
               height: 64,
             }}
           />
+          {renderHeader()}
         </Header>
         <Content
           style={{

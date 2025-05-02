@@ -10,10 +10,30 @@ const mecklenburgCountyBounds = [
   [35.4985, -80.5636]
 ];
 
+const businesses = [
+  {
+    name: "NoDa Brewing Company",
+    type: "brewery",
+    address: "2921 N Tryon St, Charlotte, NC 28206",
+    lat: 35.2456,
+    lng: -80.8089,
+    phone: "(704) 900-6851",
+    website: "https://nodabrewing.com"
+  }
+]
 const MapWithNoSSR = dynamic(
   () => import('react-leaflet').then((mod) => {
-    const { MapContainer, TileLayer, useMap } = mod;
+    const { MapContainer, TileLayer, useMap, Marker, Popup } = mod;
     const L = require('leaflet');
+
+    const createUserLocationIcon = () => {
+      return L.divIcon({
+        className: 'user-location-icon',
+        html: `<div style="background-color: #4285F4; width: 16px; height: 16px; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 3px rgba(0,0,0,0.5);"></div>`,
+        iconSize: [22, 22],
+        iconAnchor: [11, 11],
+      });
+    };
     
     // This is a controller for the map that is used to fit the map to the county bounds
     function MapController({ bounds }: { bounds: any }) {
@@ -41,10 +61,11 @@ const MapWithNoSSR = dynamic(
       return null;
     }
 
-    return function Map() {
+
+    return function Map( { userLocation }: { userLocation: { lat: number, lng: number } | null } ) {
       const defaultCenter: [number, number] = [39.8283, -98.5795];
       const defaultZoom = 12;
-   
+
       return (
         <div className="w-full h-full">
           <MapContainer
@@ -59,6 +80,51 @@ const MapWithNoSSR = dynamic(
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             />
             <MapController bounds={mecklenburgCountyBounds} />
+            {userLocation && (
+          <Marker 
+            position={[userLocation.lat, userLocation.lng]}
+            icon={createUserLocationIcon()}
+          >
+            <Popup>
+              <div>
+                <p className="font-bold">Your Location</p>
+                <p className="text-xs text-gray-600">
+                  {userLocation.lat.toFixed(5)}, {userLocation.lng.toFixed(5)}
+                </p>
+              </div>
+            </Popup>
+          </Marker>
+        )}
+            {businesses && businesses.map((business, index) => (
+          <Marker 
+            key={index} 
+            position={[business.lat, business.lng]}
+            icon={L.icon({
+              iconUrl: '/beer.svg',
+              iconSize: [20, 20],
+              iconAnchor: [10, 10],
+            })}
+          >
+            <Popup>
+              <div>
+                <h3 className="font-bold">{business.name}</h3>
+                <p>{business.address}</p>
+                <p className="text-sm text-gray-600">{business.type}</p>
+                {business.phone && <p>📞 {business.phone}</p>}
+                {business.website && (
+                  <a 
+                    href={business.website} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-blue-500 hover:underline"
+                  >
+                    Visit Website
+                  </a>
+                )}
+              </div>
+            </Popup>
+          </Marker>
+          ))}
           </MapContainer>
         </div>
       );
@@ -69,16 +135,51 @@ const MapWithNoSSR = dynamic(
 
 const Map = () => {
   const [rendered, setRendered] = useState(false);
+  const [userLocation, setUserLocation] = useState<{ lat: number, lng: number } | null>(null);
+  const [locationError, setLocationError] = useState<string | null>(null);
+  const [isLocating, setIsLocating] = useState(false);
 
   useEffect(() => {
     setRendered(true);
   }, []);
 
-  if (!rendered) {
+  useEffect(() => {
+    if (rendered) {
+      getUserLocation();
+    }
+  }, [rendered]);
+
+  const getUserLocation = () => {
+    if (!navigator.geolocation) {
+      setLocationError("Geolocation is not supported by your browser");
+      return;
+    }
+    
+    setIsLocating(true);
+    setLocationError(null);
+    
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setUserLocation({
+          lat: position.coords.latitude,
+          lng: position.coords.longitude
+        });
+        setIsLocating(false);
+      },
+      (error) => {
+        setLocationError("Unable to retrieve your location");
+        setIsLocating(false);
+        console.error("Geolocation error:", error);
+      },
+      { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+    );
+  };
+
+  if (!rendered || isLocating) {
     return <Flex justify="center" align="center" style={{ height: '100vh' }}><Spin size='large' /></Flex>
   }
 
-  return <MapWithNoSSR />;
+  return <MapWithNoSSR userLocation={userLocation} />;
 };
 
 export default Map;
