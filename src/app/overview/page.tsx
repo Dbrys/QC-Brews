@@ -1,18 +1,16 @@
 'use client';
 
 import React, { useState } from 'react';
-import Image from 'next/image';
-import Icon, {
+import {
   MenuFoldOutlined,
   MenuUnfoldOutlined,
   HomeOutlined,
-  CalendarOutlined
+  CalendarOutlined,
 } from '@ant-design/icons';
 import { Button, Layout, Menu, theme } from 'antd';
 import Map from './map';
-import BeerIcon from '@/icons/BeerIcon';
+import BeerIcon from '@/icons/beerIcon';
 const { Header, Sider, Content } = Layout;
-
 
 const Overview: React.FC = () => {
   const [collapsed, setCollapsed] = useState(false);
@@ -36,21 +34,17 @@ const Overview: React.FC = () => {
       default:
         return <div>Select a menu item</div>;
     }
-  }
+  };
   const renderContent = () => {
     switch (selectedKey) {
       case '1':
-        return (
-                <Map />
-        );
+        return <Map />;
       case '2':
         return (
           <div className="flex flex-col gap-4">
             <div className="flex flex-row gap-4">
               <div className="flex flex-col gap-2">
-                <h1 className="text-2xl font-bold">
-                  Events
-                </h1>
+                <h1 className="text-2xl font-bold">Events</h1>
                 <p className="text-sm text-gray-500">
                   Upcoming beer events and tastings
                 </p>
@@ -63,9 +57,7 @@ const Overview: React.FC = () => {
           <div className="flex flex-col gap-4">
             <div className="flex flex-row gap-4">
               <div className="flex flex-col gap-2">
-                <h1 className="text-2xl font-bold">
-                  Beers
-                </h1>
+                <h1 className="text-2xl font-bold">Beers</h1>
                 <p className="text-sm text-gray-500">
                   Browse local craft beers
                 </p>
@@ -108,7 +100,10 @@ const Overview: React.FC = () => {
         />
       </Sider>
       <Layout>
-        <Header style={{ padding: 0, background: colorBgContainer }} className="flex flex-row items-center">
+        <Header
+          style={{ padding: 0, background: colorBgContainer }}
+          className="flex flex-row items-center"
+        >
           <Button
             type="text"
             icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
