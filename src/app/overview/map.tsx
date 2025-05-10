@@ -4,50 +4,13 @@ import React, { useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { Flex, Spin } from 'antd';
 import 'leaflet/dist/leaflet.css';
+import { BreweryMapProps, Brewery } from '@/types/map';
 
 const mecklenburgCountyBounds = [
   [34.998, -81.0379],
   [35.4985, -80.5636],
 ];
 
-const businesses = [
-  {
-    name: 'NoDa Brewing Company',
-    type: 'brewery',
-    address: '2921 N Tryon St, Charlotte, NC 28206',
-    lat: 35.2456,
-    lng: -80.8089,
-    phone: '(704) 900-6851',
-    website: 'https://nodabrewing.com',
-  },
-  {
-    name: 'Lost Worlds Brewing Company',
-    type: 'brewery',
-    address: '1100 Metropolitan Ave #165, Charlotte, NC 28204',
-    lat: 35.212549,
-    lng: -80.835303,
-    phone: '(980) 207-0827',
-    website: 'https://lostworldsbeer.com',
-  },
-  {
-    name: 'Birdsong Brewing Co.',
-    type: 'brewery',
-    address: '1016 N Davidson St, Charlotte, NC 28206',
-    lat: 35.230652,
-    lng: -80.826538,
-    phone: '(704) 332-1810',
-    website: 'https://birdsongbrewing.com',
-  },
-  {
-    name: 'Sycamore Brewing',
-    type: 'brewery',
-    address: '2151 Hawkins St, Charlotte, NC 28203',
-    lat: 35.209042,
-    lng: -80.86203,
-    phone: '(980) 201-3370',
-    website: 'https://sycamorebrewing.com',
-  },
-];
 const MapWithNoSSR = dynamic(
   () =>
     import('react-leaflet').then((mod) => {
@@ -100,11 +63,7 @@ const MapWithNoSSR = dynamic(
         return null;
       }
 
-      return function Map({
-        userLocation,
-      }: {
-        userLocation: { lat: number; lng: number } | null;
-      }) {
+      return function Map({ userLocation, businesses }: BreweryMapProps) {
         const defaultCenter: [number, number] = [39.8283, -98.5795];
         const defaultZoom = 12;
 
@@ -185,6 +144,7 @@ const Map = () => {
   } | null>(null);
   const [locationError, setLocationError] = useState<string | null>(null);
   const [isLocating, setIsLocating] = useState(false);
+  const [breweries, setBreweries] = useState([]);
 
   useEffect(() => {
     setRendered(true);
@@ -192,7 +152,68 @@ const Map = () => {
 
   useEffect(() => {
     if (rendered) {
+      const getBreweries = () => {
+        const overpassQuery = `
+        [out:json];
+        (
+        node["craft"="brewery"][name](34.998,-81.0379,35.4985,-80.5636);
+        way["craft"="brewery"][name](34.998,-81.0379,35.4985,-80.5636);
+
+        node["industrial"="brewery"][name](34.998,-81.0379,35.4985,-80.5636);
+        way["industrial"="brewery"][name](34.998,-81.0379,35.4985,-80.5636);
+
+        node["shop"="brewery"][name](34.998,-81.0379,35.4985,-80.5636);
+        way["shop"="brewery"][name](34.998,-81.0379,35.4985,-80.5636);
+
+        node["brewery"][name](34.998,-81.0379,35.4985,-80.5636);
+        way["brewery"][name](34.998,-81.0379,35.4985,-80.5636);
+      );
+      out body;
+      `;
+
+        fetch('https://overpass-api.de/api/interpreter', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: `data=${encodeURIComponent(overpassQuery)}`,
+        })
+          .then((response) => {
+            if (!response.ok) {
+              throw new Error(`HTTP error! Status: ${response.status}`);
+            }
+            return response.json();
+          })
+          .then((data) => {
+            const breweries = data.elements.reduce(
+              (collection: { nodes: Brewery[]; ways: [] }, curr: any) => {
+                if (curr.type === 'node') {
+                  const brewery = {
+                    lat: curr.lat,
+                    lng: curr.lon,
+                    name: curr.tags?.name || '',
+                    type: 'brewery',
+                    phone: curr.tags?.phone || '',
+                    website: curr.tags?.website || '',
+                  };
+                  collection.nodes.push(brewery);
+                } else if (curr.type === 'way') {
+                  collection.ways.push(curr);
+                }
+                return collection;
+              },
+              { nodes: [], ways: [] }
+            );
+            setBreweries(breweries.nodes);
+            setIsLocating(false);
+          })
+          .catch((error) => {
+            console.error('Error fetching data from Overpass API:', error);
+          });
+      };
+      setIsLocating(true);
       getUserLocation();
+      getBreweries();
     }
   }, [rendered]);
 
@@ -202,7 +223,6 @@ const Map = () => {
       return;
     }
 
-    setIsLocating(true);
     setLocationError(null);
 
     navigator.geolocation.getCurrentPosition(
@@ -211,7 +231,6 @@ const Map = () => {
           lat: position.coords.latitude,
           lng: position.coords.longitude,
         });
-        setIsLocating(false);
       },
       (error) => {
         setLocationError('Unable to retrieve your location');
@@ -238,7 +257,7 @@ const Map = () => {
     );
   }
 
-  return <MapWithNoSSR userLocation={userLocation} />;
+  return <MapWithNoSSR userLocation={userLocation} businesses={breweries} />;
 };
 
 export default Map;
