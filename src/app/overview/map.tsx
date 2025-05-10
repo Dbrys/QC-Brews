@@ -20,6 +20,33 @@ const businesses = [
     phone: '(704) 900-6851',
     website: 'https://nodabrewing.com',
   },
+  {
+    name: 'Lost Worlds Brewing Company',
+    type: 'brewery',
+    address: '1100 Metropolitan Ave #165, Charlotte, NC 28204',
+    lat: 35.212549,
+    lng: -80.835303,
+    phone: '(980) 207-0827',
+    website: 'https://lostworldsbeer.com',
+  },
+  {
+    name: 'Birdsong Brewing Co.',
+    type: 'brewery',
+    address: '1016 N Davidson St, Charlotte, NC 28206',
+    lat: 35.230652,
+    lng: -80.826538,
+    phone: '(704) 332-1810',
+    website: 'https://birdsongbrewing.com',
+  },
+  {
+    name: 'Sycamore Brewing',
+    type: 'brewery',
+    address: '2151 Hawkins St, Charlotte, NC 28203',
+    lat: 35.209042,
+    lng: -80.86203,
+    phone: '(980) 201-3370',
+    website: 'https://sycamorebrewing.com',
+  },
 ];
 const MapWithNoSSR = dynamic(
   () =>
@@ -58,6 +85,15 @@ const MapWithNoSSR = dynamic(
             // Set min/max zoom levels
             map.setMinZoom(10); // Don't allow zooming out too far
             map.setMaxZoom(18); // Limit maximum zoom
+
+            const resizeObserver = new ResizeObserver(() => {
+              map.invalidateSize();
+            });
+
+            resizeObserver.observe(map.getContainer());
+            return () => {
+              resizeObserver.disconnect();
+            };
           }
         }, [map, bounds]);
 
