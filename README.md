@@ -6,7 +6,7 @@ A web app used to find some of the best brews and events in the QC area.
 
 - React-Leaflet - for interactive map using Leaflet in React
 - Overpass API - to retrieve business data from OpenStreetMap
-- Nominatim - for geolocation data not supplied from Overpass
+- WIP - Mapbox - for geolocation data not supplied from Overpass
 - Ant-Design - popular UI framework for reusable components and icons
 
 ## Getting Started

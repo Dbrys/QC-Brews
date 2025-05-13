@@ -4,7 +4,13 @@ import React, { useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { Flex, Spin } from 'antd';
 import 'leaflet/dist/leaflet.css';
-import { BreweryMapProps, Brewery } from '@/types/map';
+import {
+  BreweryMapProps,
+  Brewery,
+  OsmTags,
+  OsmNode,
+  OsmWay,
+} from '@/types/map';
 
 const mecklenburgCountyBounds = [
   [34.998, -81.0379],
@@ -111,7 +117,7 @@ const MapWithNoSSR = dynamic(
                     <Popup>
                       <div>
                         <h3 className="font-bold">{business.name}</h3>
-                        <p>{business.address}</p>
+                        {/* <p>{business.address}</p> */}
                         <p className="text-sm text-gray-600">{business.type}</p>
                         {business.phone && <p>📞 {business.phone}</p>}
                         {business.website && (
@@ -186,7 +192,10 @@ const Map = () => {
           })
           .then((data) => {
             const breweries = data.elements.reduce(
-              (collection: { nodes: Brewery[]; ways: [] }, curr: any) => {
+              (
+                collection: { nodes: Brewery[]; ways: string[] },
+                curr: OsmNode | OsmWay
+              ) => {
                 if (curr.type === 'node') {
                   const brewery = {
                     lat: curr.lat,
@@ -197,8 +206,12 @@ const Map = () => {
                     website: curr.tags?.website || '',
                   };
                   collection.nodes.push(brewery);
-                } else if (curr.type === 'way') {
-                  collection.ways.push(curr);
+                } else if (
+                  curr.type === 'way' &&
+                  curr.tags &&
+                  curr.tags['addr:housenumber']
+                ) {
+                  collection.ways.push(getAddressFromTags(curr.tags));
                 }
                 return collection;
               },
@@ -239,6 +252,20 @@ const Map = () => {
       },
       { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
     );
+  };
+
+  const getAddressFromTags = (tags: OsmTags): string => {
+    const address =
+      tags['addr:housenumber'] +
+      ' ' +
+      tags['addr:street'] +
+      ', ' +
+      tags['addr:city'] +
+      ', ' +
+      tags['addr:state'] +
+      ', ' +
+      tags['addr:postcode'];
+    return address;
   };
 
   if (locationError) {
