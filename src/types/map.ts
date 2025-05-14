@@ -5,6 +5,7 @@ export type Brewery = {
     type: string;
     phone?: string;
     website?: string;
+    address?: string;
 }
 
 export type BreweryMapProps = {

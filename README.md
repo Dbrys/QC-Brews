@@ -5,8 +5,7 @@ A web app used to find some of the best brews and events in the QC area.
 ### Technologies used
 
 - React-Leaflet - for interactive map using Leaflet in React
-- Overpass API - to retrieve business data from OpenStreetMap
-- WIP - Mapbox - for geolocation data not supplied from Overpass
+- Overpass API - to retrieve business data and location from OpenStreetMap
 - Ant-Design - popular UI framework for reusable components and icons
 
 ## Getting Started

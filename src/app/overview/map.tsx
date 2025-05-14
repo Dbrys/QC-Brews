@@ -4,18 +4,44 @@ import React, { useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { Flex, Spin } from 'antd';
 import 'leaflet/dist/leaflet.css';
-import {
-  BreweryMapProps,
-  Brewery,
-  OsmTags,
-  OsmNode,
-  OsmWay,
-} from '@/types/map';
+import { BreweryMapProps, OsmTags, OsmNode, OsmWay } from '@/types/map';
 
 const mecklenburgCountyBounds = [
   [34.998, -81.0379],
   [35.4985, -80.5636],
 ];
+
+const overpassQuery = `
+        [out:json];
+        (
+        node["craft"="brewery"][name](34.998,-81.0379,35.4985,-80.5636);
+        way["craft"="brewery"][name](34.998,-81.0379,35.4985,-80.5636);
+
+        node["industrial"="brewery"][name](34.998,-81.0379,35.4985,-80.5636);
+        way["industrial"="brewery"][name](34.998,-81.0379,35.4985,-80.5636);
+
+        node["shop"="brewery"][name](34.998,-81.0379,35.4985,-80.5636);
+        way["shop"="brewery"][name](34.998,-81.0379,35.4985,-80.5636);
+
+        node["brewery"][name](34.998,-81.0379,35.4985,-80.5636);
+        way["brewery"][name](34.998,-81.0379,35.4985,-80.5636);
+      );
+      out center;
+      `;
+
+const getAddressFromTags = (tags: OsmTags): string => {
+  const address =
+    tags['addr:housenumber'] +
+    ' ' +
+    tags['addr:street'] +
+    ', ' +
+    tags['addr:city'] +
+    ', ' +
+    tags['addr:state'] +
+    ', ' +
+    tags['addr:postcode'];
+  return address;
+};
 
 const MapWithNoSSR = dynamic(
   () =>
@@ -117,7 +143,7 @@ const MapWithNoSSR = dynamic(
                     <Popup>
                       <div>
                         <h3 className="font-bold">{business.name}</h3>
-                        {/* <p>{business.address}</p> */}
+                        {business.address && <p>{business.address}</p>}
                         <p className="text-sm text-gray-600">{business.type}</p>
                         {business.phone && <p>📞 {business.phone}</p>}
                         {business.website && (
@@ -158,72 +184,58 @@ const Map = () => {
 
   useEffect(() => {
     if (rendered) {
-      const getBreweries = () => {
-        const overpassQuery = `
-        [out:json];
-        (
-        node["craft"="brewery"][name](34.998,-81.0379,35.4985,-80.5636);
-        way["craft"="brewery"][name](34.998,-81.0379,35.4985,-80.5636);
-
-        node["industrial"="brewery"][name](34.998,-81.0379,35.4985,-80.5636);
-        way["industrial"="brewery"][name](34.998,-81.0379,35.4985,-80.5636);
-
-        node["shop"="brewery"][name](34.998,-81.0379,35.4985,-80.5636);
-        way["shop"="brewery"][name](34.998,-81.0379,35.4985,-80.5636);
-
-        node["brewery"][name](34.998,-81.0379,35.4985,-80.5636);
-        way["brewery"][name](34.998,-81.0379,35.4985,-80.5636);
-      );
-      out body;
-      `;
-
-        fetch('https://overpass-api.de/api/interpreter', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-          },
-          body: `data=${encodeURIComponent(overpassQuery)}`,
-        })
-          .then((response) => {
-            if (!response.ok) {
-              throw new Error(`HTTP error! Status: ${response.status}`);
-            }
-            return response.json();
-          })
-          .then((data) => {
-            const breweries = data.elements.reduce(
-              (
-                collection: { nodes: Brewery[]; ways: string[] },
-                curr: OsmNode | OsmWay
-              ) => {
-                if (curr.type === 'node') {
-                  const brewery = {
-                    lat: curr.lat,
-                    lng: curr.lon,
-                    name: curr.tags?.name || '',
-                    type: 'brewery',
-                    phone: curr.tags?.phone || '',
-                    website: curr.tags?.website || '',
-                  };
-                  collection.nodes.push(brewery);
-                } else if (
-                  curr.type === 'way' &&
-                  curr.tags &&
-                  curr.tags['addr:housenumber']
-                ) {
-                  collection.ways.push(getAddressFromTags(curr.tags));
-                }
-                return collection;
+      async function getBreweries() {
+        try {
+          const response = await fetch(
+            'https://overpass-api.de/api/interpreter',
+            {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
               },
-              { nodes: [], ways: [] }
-            );
-            setBreweries(breweries.nodes);
-            setIsLocating(false);
-          })
-          .catch((error) => {
-            console.error('Error fetching data from Overpass API:', error);
+              body: `data=${encodeURIComponent(overpassQuery)}`,
+            }
+          );
+          if (!response.ok) {
+            throw new Error(`HTTP error! Status: ${response.status}`);
+          }
+          const data = await response.json();
+          const breweries = data.elements.map((curr: OsmNode | OsmWay) => {
+            if (curr.type === 'way' && curr.center) {
+              return {
+                lat: curr.center.lat,
+                lng: curr.center.lon,
+                name: curr.tags?.name || '',
+                type: 'brewery',
+                phone: curr.tags?.phone || '',
+                website: curr.tags?.website || '',
+                address:
+                  curr.tags && curr.tags['addr:housenumber']
+                    ? getAddressFromTags(curr.tags)
+                    : undefined,
+              };
+            }
+            if (curr.type === 'node') {
+              return {
+                lat: curr.lat,
+                lng: curr.lon,
+                name: curr.tags?.name || '',
+                type: 'brewery',
+                phone: curr.tags?.phone || '',
+                website: curr.tags?.website || '',
+                address:
+                  curr.tags && curr.tags['addr:housenumber']
+                    ? getAddressFromTags(curr.tags)
+                    : undefined,
+              };
+            }
           });
-      };
+          setBreweries(breweries);
+          setIsLocating(false);
+        } catch (error) {
+          console.error('Error fetching data from Overpass API:', error);
+        }
+      }
       setIsLocating(true);
       getUserLocation();
       getBreweries();
@@ -252,20 +264,6 @@ const Map = () => {
       },
       { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
     );
-  };
-
-  const getAddressFromTags = (tags: OsmTags): string => {
-    const address =
-      tags['addr:housenumber'] +
-      ' ' +
-      tags['addr:street'] +
-      ', ' +
-      tags['addr:city'] +
-      ', ' +
-      tags['addr:state'] +
-      ', ' +
-      tags['addr:postcode'];
-    return address;
   };
 
   if (locationError) {
